@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <tuple>
-
+#include <string>
 
 std::tuple<int,void*> get_convolutional_weights(layer l);
 
