@@ -1,0 +1,15 @@
+{
+
+    "Display" : {
+        "Enabled" : true,
+        "Rate" : 144,
+        "Width" : 1600,
+        "Height" : 900
+    },
+    "Overlay" : {
+        "Enabled" : true,
+        "Rate" : 60,
+        "ShowStats" : true,
+        "ShowArea" : true
+    }
+}

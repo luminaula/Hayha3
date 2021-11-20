@@ -1,0 +1,14 @@
+{
+    "Capture" : {
+        "Rate" : 120,
+        "X" : 0,
+        "Y" : 0,
+        "Width" : 2560,
+        "Height" : 1440,
+        "CaptureDetectionArea" : true,
+        "DXGI" : true,
+        "Window" : "Counter-Strike: Global Offensive",
+        "X11Window" : "Counter-Strike: Global Offensive - OpenGL",
+        "Async" : false
+    }
+}

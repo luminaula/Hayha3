@@ -1,0 +1,6 @@
+{
+"Train" : {
+    "Library" : "HNetCUDNN",
+    "GPUs" : [0]
+}
+}

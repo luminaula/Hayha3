@@ -1,0 +1,16 @@
+{
+    "Detect" : {
+        "Rate" : 120,
+        "X" : 704,
+        "Y" : 396,
+        "Width" : 512,
+        "Height" : 288,
+        "Thresh" : 55,
+        "Center" : true,
+        "UseNetResolution" : true,
+        "NetRatio" : 1.0,
+        "AroundMouse" : true,
+        "Remote" : false,
+        "IP" : "127.0.0.1"
+    }
+}

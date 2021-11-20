@@ -1,0 +1,98 @@
+
+Hayha API 0.2.6
+
+bbox{
+    int x, y, w, h;	// (x,y) - top-left corner, (w, h) - width & height of bounded box
+    float prob;					// confidence - probability that the object was found correctly
+    unsigned int obj_id;		// class of object - from range [0, classes-1]
+}
+
+
+Required functions:
+    target(x)
+        x = array of boxes details above
+        called after every detection. Currently highly dependant on detection speed
+        return index of target or 0 if no target
+
+    aim(x)
+        x = targeted bbox
+        called if target returns integer other than 0
+
+Hayha API:
+    cursor {x,y}
+        Position of cursor
+
+    tid = current target id
+        Supports only one targeting ID for now
+
+
+    captureTime = Time taken by capturer (usec)
+    detectionTime = Time taken by detector (usec)
+
+    detections = Array of detections in form of bbox
+    detectionsPrev = Array of previous detections
+
+    checkKey(key code)
+        Returns true if key is being pressed
+        https://docs.microsoft.com/en-us/windows/desktop/inputdev/virtual-key-codes
+        OR
+        keysymdef.h on linux
+        Seriously check the link above.
+        You SHOULD setup key listening in Keyboard.lua. 
+
+    
+    click(time)
+        Click for time microseconds
+
+    usleep(time)
+        Sleep time microseconds
+    
+    moveMouse(x,y)
+        Moves mouse by x and y
+
+    log(x)
+
+    int time()
+        time since start
+
+    int timeClicked()
+        time spent clicking
+
+
+
+    setMouseRate(hz)
+        Rate of mouse worker
+    
+    center(bool)
+        If true the cursor will be always assumed to be in the middle of the screen.
+        Else it will be it's real position
+
+
+    clearIgnore()
+        clears list of ignored areas
+
+    ignore(x,y,w,h)
+        Draws a black box during capture phase
+        Hides stuff you don't want to be detected
+
+    clearTeams()
+        Reset team IDs
+    
+    newTeam()
+        add a new team
+    
+    targetID(int)
+        Add a new target ID to the newest team
+
+
+    clear()
+        clears listened keys
+    listen(x)
+        begin listening of key
+    setKeyboardRate(hz)
+        set rate of keyboard worker
+    strict(bool)
+        If true worker will only listen to predefined keys.
+        Else key codes will be added to list accompanied with a warning when trying to listen
+    
+    keyMain() is called after mouse. Please don't remove

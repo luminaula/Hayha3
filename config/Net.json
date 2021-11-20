@@ -1,0 +1,12 @@
+{
+    "Net" : {
+        "Library" : "HNetCUDA",
+        "GpuIndex" : 0,
+        "Width" : 8,
+        "Height" : 8,
+        "Precision" : "FLOAT",
+        "Profile" : "de_dust4"
+    }
+
+
+}
