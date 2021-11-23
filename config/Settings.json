@@ -4,15 +4,15 @@
         "LogLevel" : 0
     },
     "Net" : {
-        "Library" : "HNetCUDNN",
+        "Library" : "HNetCUDA",
         "GpuIndex" : 0,
         "Width" : 8,
         "Height" : 8,
         "Precision" : "FLOAT",
-        "Profile" : "de_dust4"
+        "Profile" : "de_dust3"
     },
     "Capture" : {
-        "Rate" : 120,
+        "Rate" : 60,
         "Format" : "RGB",
         "X" : 0,
         "Y" : 0,
@@ -49,7 +49,7 @@
         "Height" : 900
     },
     "Overlay" : {
-        "Enabled" : true,
+        "Enabled" : false,
         "Rate" : 25,
         "ShowStats" : true,
         "ShowArea" : true

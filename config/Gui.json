@@ -2,12 +2,12 @@
 
     "Display" : {
         "Enabled" : true,
-        "Rate" : 144,
+        "Rate" : 60,
         "Width" : 1600,
         "Height" : 900
     },
     "Overlay" : {
-        "Enabled" : true,
+        "Enabled" : false,
         "Rate" : 60,
         "ShowStats" : true,
         "ShowArea" : true

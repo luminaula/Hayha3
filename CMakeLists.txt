@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 
 set(CMAKE_INSTALL_PREFIX "Hayha")
 
@@ -12,7 +12,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(FULLPATH_INSTALL_CMAKE_DIR "libs/")
 
 
 if (UNIX)
@@ -28,12 +29,13 @@ endif()
 
 add_subdirectory(libHappy)
 add_subdirectory(libHCore)
-add_subdirectory(libHNet)
+#add_subdirectory(libHNet)
 
 
 #add_subdirectory(libHNetCL)
 add_subdirectory(libHInput)
 add_subdirectory(App)
+add_subdirectory(darknet)
 
 add_subdirectory(libHCapture)
 #add_subdirectory(libHNetTRT)

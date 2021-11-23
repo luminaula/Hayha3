@@ -234,20 +234,20 @@ void Framebuffer::scaleRow(int row, int width, int height, unsigned char **tmp) 
         }
 
         HEBI::Colors::Color rgb = HEBI::Colors::rgb[color];
-        HEBI::Colors::Color xyz = HEBI::Colors::xyz[color];
-        HEBI::Colors::Color lab = HEBI::Colors::lab[color];
+        //HEBI::Colors::Color xyz = HEBI::Colors::xyz[color];
+        //HEBI::Colors::Color lab = HEBI::Colors::lab[color];
 
         *rgbp[0]++ = rgb.values[0];
         *rgbp[1]++ = rgb.values[1];
         *rgbp[2]++ = rgb.values[2];
 
-        *xyzp[0]++ = xyz.values[0];
-        *xyzp[1]++ = xyz.values[1];
-        *xyzp[2]++ = xyz.values[2];
-
-        *labp[0]++ = lab.values[0];
-        *labp[1]++ = lab.values[1];
-        *labp[2]++ = lab.values[2];
+        //*xyzp[0]++ = xyz.values[0];
+        //*xyzp[1]++ = xyz.values[1];
+        //*xyzp[2]++ = xyz.values[2];
+        
+        //*labp[0]++ = lab.values[0];
+        //*labp[1]++ = lab.values[1];
+        //*labp[2]++ = lab.values[2];
 
 
     }
