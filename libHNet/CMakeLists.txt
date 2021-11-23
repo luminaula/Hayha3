@@ -5,13 +5,11 @@ set(CMAKE_INSTALL_PREFIX "Hayha")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 
 
-SET(ENV{LD_LIBRARY_PATH} "/usr/local/cuda/lib64:$ENV{LD_LIBRARY_PATH}")
-
 project(HNet LANGUAGES C CXX CUDA)
 
 set(CMAKE_VS_PLATFORM_TOOLSET_CUDA 10.0)
 set(CMAKE_CUDA_FLAGS
-    "  -gencode arch=compute_52,code=[sm_52,compute_52]  -gencode arch=compute_61,code=[sm_61,compute_61]  -gencode arch=compute_70,code=[sm_70,compute_70] -gencode arch=compute_75,code=[sm_75,compute_75]"
+    "-gencode arch=compute_70,code=[sm_70,compute_70] -gencode arch=compute_75,code=[sm_75,compute_75]"
 )
 
 find_package(OpenMP)
@@ -22,7 +20,6 @@ if (OPENMP_FOUND)
 endif()
 
 find_package (Threads)
-
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc/)
 
