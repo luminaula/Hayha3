@@ -17,16 +17,17 @@ set(FULLPATH_INSTALL_CMAKE_DIR "libs/")
 
 
 if (UNIX)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -O0 -ggdb -I/usr/local/cuda/include")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -march=native -I/usr/local/cuda/include")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -O0 -ggdb -I/usr/local/cuda/include")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Ofast -march=native -I/usr/local/cuda/include")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -O0 -ggdb")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -march=native")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -O0 -ggdb")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Ofast -march=native")
 else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox /MP8")
 endif()
 
 
 
+add_subdirectory(darknet)
 add_subdirectory(libHappy)
 add_subdirectory(libHCore)
 #add_subdirectory(libHNet)
@@ -35,7 +36,6 @@ add_subdirectory(libHCore)
 #add_subdirectory(libHNetCL)
 add_subdirectory(libHInput)
 add_subdirectory(App)
-add_subdirectory(darknet)
 
 add_subdirectory(libHCapture)
 #add_subdirectory(libHNetTRT)
