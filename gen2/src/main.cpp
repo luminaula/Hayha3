@@ -1137,21 +1137,7 @@ void display(void){
 
 void usage(void)
 {
-	fprintf(stderr, "usage: assview [-geometry WxH] [options] asset.dae\n");
-	fprintf(stderr, "\t-i\tdimetric (2:1) camera\n");
-	fprintf(stderr, "\t-I\ttrue isometric camera\n");
-	fprintf(stderr, "\t-a\talpha transparency mode; use more times for higher quality.\n");
-	fprintf(stderr, "\t-b\tdon't render backfaces\n");
-	fprintf(stderr, "\t-g\trender ground plane\n");
-	fprintf(stderr, "\t-l\tone-sided lighting\n");
-	fprintf(stderr, "\t-t\tdon't render textures\n");
-	fprintf(stderr, "\t-w\trender wireframe\n");
-	fprintf(stderr, "\t-c r,g,b\tbackground color\n");
-	fprintf(stderr, "\t-r n\trotate camera n degrees (yaw)\n");
-	fprintf(stderr, "\t-p n\tpitch camera n degrees\n");
-	fprintf(stderr, "\t-z n\tzoom camera n times\n");
-	fprintf(stderr, "\t-f n\trender animation at frame n\n");
-	exit(1);
+
 }
 
 int main(int argc, char **argv)
