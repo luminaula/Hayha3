@@ -1,11 +1,12 @@
-#include "bbox.hpp"
 #include "module.hpp"
+#include "bbox.hpp"
 
-class TrackerModule : public Module {
-  private:
-  public:
+class TrackerModule : public Module{
+private:
+public:
+
     MFunc<std::vector<bbox_t>> m_boxes;
 
-    TrackerModule() {}
+    TrackerModule(){}
     void loadModule() override;
 };

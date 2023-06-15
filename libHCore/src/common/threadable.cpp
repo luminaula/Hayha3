@@ -64,6 +64,7 @@ void Threadable::startLoop(){
 }
 
 void Threadable::endLoop(){
+    m_busy = false;
     endTime = getCurrentTimeMicro();
     uint32_t timeMikro = getTimeDifference(endTime, startTime);
     if(timeMikro < m_workTimeUsec){
@@ -75,7 +76,6 @@ void Threadable::endLoop(){
     else{
         m_accumulator = timeMikro - m_workTimeUsec;
     }
-    m_busy = false;
 }
 
 bool Threadable::startEventLoop(timeStamp sTime){
@@ -97,7 +97,6 @@ void Threadable::endEventLoop(){
             nextTime = endTime;
         m_core->eventHandler->addEvent(nextTime,&Threadable::workerEventThread,this,nextTime);
     }
-    
 }
 
 void Threadable::singleLoop(){
@@ -107,10 +106,6 @@ void Threadable::singleLoop(){
     m_busy = true;
     work();
     m_busy = false;
-}
-
-void Threadable::singleLoopAsync(){
-    m_core->tPool->enqueuev(&Threadable::singleLoop,this);
 }
 
 void Threadable::startThread(){
@@ -131,9 +126,6 @@ void Threadable::workerThread(){
 }
 
 void Threadable::workerEventThread(timeStamp sTime){
-    if(m_busy){
-        return;
-    }
     if(!startEventLoop(sTime))
         return;
     work();
@@ -143,7 +135,7 @@ void Threadable::workerEventThread(timeStamp sTime){
 
 
 void Threadable::startEventThread(){
-    if(!m_running || m_busy){
+    if(!m_running){
         m_running = true;
         m_core->tPool->enqueuev(&Threadable::workerEventThread,this,getCurrentTimeMicro());
         m_core->log(LOG_INFO,"Start worker %s",m_threadName.c_str());
@@ -153,9 +145,6 @@ void Threadable::startEventThread(){
 }
 
 void Threadable::stopThread(){
-    if(!m_running){
-        return;
-    }
     m_core->log(LOG_INFO,"Stop worker %s",m_threadName.c_str());
     m_running = false;
     notify();

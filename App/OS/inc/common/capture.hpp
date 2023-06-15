@@ -3,16 +3,16 @@
 #include "framebuffer.hpp"
 #include "module.hpp"
 
-namespace OS {
+namespace OS{
 
-class HCapture : public Module {
-  public:
-    HCapture();
-};
+    class HCapture : public Module{
+    public:
+        HCapture();
+    };
 
-extern HCapture *capture;
+    extern HCapture *capture;
 
-void initCapture();
-void *captureFrame(Framebuffer &fb);
-void processFrame(Framebuffer &fb);
-} // namespace OS
+    void initCapture();
+    void* captureFrame(Framebuffer &fb);
+    void processFrame(Framebuffer &fb);
+}

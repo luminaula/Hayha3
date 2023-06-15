@@ -12,7 +12,6 @@ else()
 endif()
 
 find_package (Threads)
-find_package(X11)
 
 add_library(HCapture SHARED ${SOURCES_COMMON} ${SOURCES_PLATFORM})
 

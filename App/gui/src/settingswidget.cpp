@@ -2,167 +2,198 @@
 #include "settings.hpp"
 #include "workers.hpp"
 
-#include "fancyslider.h"
 #include <QApplication>
-#include <QCheckBox>
 #include <QGroupBox>
 #include <QLabel>
+#include <QCheckBox>
+#include "fancyslider.h"
 
-namespace GUI {
 
-SettingsWidget::SettingsWidget(MainWindow *main) : QWidget(main) {
+namespace GUI{
 
-    QHBoxLayout *container = new QHBoxLayout;
+    SettingsWidget::SettingsWidget(MainWindow *main):
+            QWidget(main){
+        
 
-    QGroupBox *ticks = new QGroupBox;
-    QGridLayout *tickLayout = new QGridLayout;
+        QHBoxLayout *container = new QHBoxLayout;
 
-    QGroupBox *buttons = new QGroupBox;
-    QGridLayout *buttonLayout = new QGridLayout;
+        
 
-    QGroupBox *sliders = new QGroupBox;
-    QGridLayout *sliderLayout = new QGridLayout;
+        QGroupBox *ticks = new QGroupBox;
+        QGridLayout *tickLayout = new QGridLayout;
 
-    tickLayout->setAlignment(Qt::AlignTop);
-    buttonLayout->setAlignment(Qt::AlignTop);
+        QGroupBox *buttons = new QGroupBox;
+        QGridLayout *buttonLayout = new QGridLayout;
 
-    QSpinBox *updateInterval = new QSpinBox(this);
-    updateInterval->setRange(1, 2500);
-    updateInterval->setSuffix(" fps");
-    updateInterval->setValue((int)Workers::detect->getRate());
+        QGroupBox *sliders = new QGroupBox;
+        QGridLayout *sliderLayout = new QGridLayout;
 
-    connect(updateInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, &SettingsWidget::updateDetectionRate);
+        tickLayout->setAlignment(Qt::AlignTop);
+        buttonLayout->setAlignment(Qt::AlignTop);
 
-    tickLayout->addWidget(new QLabel(tr("Detection rate")), 0, 0);
-    tickLayout->addWidget(updateInterval, 0, 1);
 
-    updateInterval = new QSpinBox(this);
-    updateInterval->setRange(1, 2500);
-    updateInterval->setSuffix(" fps");
-    updateInterval->setValue((int)Workers::capture->getRate());
+        QSpinBox *updateInterval = new QSpinBox(this);
+        updateInterval->setRange(1,2500);
+        updateInterval->setSuffix(" fps");
+        updateInterval->setValue((int)Workers::detect->getRate());
+        
 
-    connect(updateInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, &SettingsWidget::updateCaptureRate);
+        connect(updateInterval, QOverload<int>::of(&QSpinBox::valueChanged),
+                this, &SettingsWidget::updateDetectionRate);
 
-    tickLayout->addWidget(new QLabel(tr("Capture rate")), 1, 0);
-    tickLayout->addWidget(updateInterval, 1, 1);
+        tickLayout->addWidget(new QLabel(tr("Detection rate")),0,0);
+        tickLayout->addWidget(updateInterval,0,1);
 
-    QSpinBox *threshBox = new QSpinBox(this);
-    threshBox->setRange(1, 100);
-    threshBox->setSuffix(" %");
-    threshBox->setValue(Settings::detection.thresh);
+        updateInterval = new QSpinBox(this);
+        updateInterval->setRange(1,2500);
+        updateInterval->setSuffix(" fps");
+        updateInterval->setValue((int)Workers::capture->getRate());
+        
+        connect(updateInterval, QOverload<int>::of(&QSpinBox::valueChanged),
+                this, &SettingsWidget::updateCaptureRate);
 
-    connect(threshBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &SettingsWidget::updateThresh);
 
-    tickLayout->addWidget(new QLabel(tr("Thresh")), 2, 0);
-    tickLayout->addWidget(threshBox, 2, 1);
 
-    QCheckBox *checker = new QCheckBox(tr("&Set limit"));
+        tickLayout->addWidget(new QLabel(tr("Capture rate")),1,0);
+        tickLayout->addWidget(updateInterval,1,1);
 
-    connect(checker, &QAbstractButton::toggled, this, &SettingsWidget::setLimit);
+        QSpinBox *threshBox = new QSpinBox(this);
+        threshBox->setRange(1,100);
+        threshBox->setSuffix(" %");
+        threshBox->setValue(Settings::detection.thresh);
 
-    tickLayout->addWidget(new QLabel(tr("Limit")), 3, 0);
-    tickLayout->addWidget(checker, 3, 1);
+        connect(threshBox,QOverload<int>::of(&QSpinBox::valueChanged),
+                this,&SettingsWidget::updateThresh);
 
-    QSpinBox *senseBox = new QSpinBox(this);
-    senseBox->setRange(1, 10000);
-    senseBox->setValue(100);
+        tickLayout->addWidget(new QLabel(tr("Thresh")),2,0);
+        tickLayout->addWidget(threshBox,2,1);
 
-    connect(senseBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &SettingsWidget::updateSense);
+        QCheckBox *checker = new QCheckBox(tr("&Set limit"));
 
-    tickLayout->addWidget(new QLabel(tr("Mouse sensitivity")), 4, 0);
-    tickLayout->addWidget(senseBox, 4, 1);
+        connect(checker, &QAbstractButton::toggled,
+                this, &SettingsWidget::setLimit);
 
-    ticks->setLayout(tickLayout);
+        tickLayout->addWidget(new QLabel(tr("Limit")),3,0);
+        tickLayout->addWidget(checker,3,1);
 
-    QPushButton *button = new QPushButton(tr("Start"));
-    connect(button, &QPushButton::clicked, this, &SettingsWidget::startButton);
-    buttonLayout->addWidget(button, 0, 0);
 
-    button = new QPushButton(tr("Switch"));
-    connect(button, &QPushButton::clicked, this, &SettingsWidget::switchButton);
-    buttonLayout->addWidget(button, 1, 0);
+        QSpinBox *senseBox = new QSpinBox(this);
+        senseBox->setRange(1,10000);
+        senseBox->setValue(100);
 
-    button = new QPushButton(tr("Reload API"));
-    connect(button, &QPushButton::clicked, this, &SettingsWidget::reloadButton);
-    buttonLayout->addWidget(button, 2, 0);
+        connect(senseBox,QOverload<int>::of(&QSpinBox::valueChanged),
+                this,&SettingsWidget::updateSense);
+        
+        tickLayout->addWidget(new QLabel(tr("Mouse sensitivity")),4,0);
+        tickLayout->addWidget(senseBox,4,1);
 
-    button = new QPushButton(tr("Benchmark"));
-    connect(button, &QPushButton::clicked, this, &SettingsWidget::benchmarkButton);
-    buttonLayout->addWidget(button, 3, 0);
 
-    button = new QPushButton(tr("Train"));
-    connect(button, &QPushButton::clicked, this, &SettingsWidget::trainButton);
-    buttonLayout->addWidget(button, 4, 0);
 
-    buttons->setLayout(buttonLayout);
 
-    FancySlider *slider = new FancySlider(Qt::Vertical);
-    slider->setFocusPolicy(Qt::StrongFocus);
-    slider->setTickPosition(QSlider::TicksBothSides);
-    slider->setTickInterval(10);
-    slider->setSingleStep(10);
-    slider->setMaximum(20);
-    slider->setMinimum(3);
-    slider->setSliderPosition(Settings::net.h / 32);
+        ticks->setLayout(tickLayout);
 
-    connect(slider, QOverload<int>::of(&QSlider::valueChanged), this, &SettingsWidget::updateSlider);
 
-    sliderLayout->addWidget(slider, 0, 0);
+        QPushButton *button = new QPushButton(tr("Start"));
+        connect(button,&QPushButton::clicked,this,&SettingsWidget::startButton);
+        buttonLayout->addWidget(button,0,0);
 
-    slider = new FancySlider(Qt::Vertical);
-    slider->setFocusPolicy(Qt::StrongFocus);
-    slider->setTickPosition(QSlider::TicksBothSides);
-    slider->setTickInterval(10);
-    slider->setSingleStep(10);
-    slider->setMaximum(20);
-    slider->setMinimum(3);
-    slider->setSliderPosition(Settings::net.w / 32);
+        button = new QPushButton(tr("Switch"));
+        connect(button,&QPushButton::clicked,this,&SettingsWidget::switchButton);
+        buttonLayout->addWidget(button,1,0);
 
-    connect(slider, QOverload<int>::of(&QSlider::valueChanged), this, &SettingsWidget::updateSliderTwo);
+        button = new QPushButton(tr("Reload API"));
+        connect(button,&QPushButton::clicked,this,&SettingsWidget::reloadButton);
+        buttonLayout->addWidget(button,2,0);
 
-    sliderLayout->addWidget(slider, 0, 1);
+        button = new QPushButton(tr("Benchmark"));
+        connect(button,&QPushButton::clicked,this,&SettingsWidget::benchmarkButton);
+        buttonLayout->addWidget(button,3,0);
 
-    sliders->setLayout(sliderLayout);
+        buttons->setLayout(buttonLayout);
 
-    container->addWidget(ticks);
-    container->addWidget(buttons);
-    container->addWidget(sliders);
 
-    setLayout(container);
+        FancySlider *slider = new FancySlider(Qt::Vertical);
+        slider->setFocusPolicy(Qt::StrongFocus);
+        slider->setTickPosition(QSlider::TicksBothSides);
+        slider->setTickInterval(10);
+        slider->setSingleStep(10);
+        slider->setMaximum(20);
+        slider->setMinimum(3);
+        slider->setSliderPosition(Settings::net.h/32);
+
+        connect(slider,QOverload<int>::of(&QSlider::valueChanged),this,&SettingsWidget::updateSlider);
+
+        sliderLayout->addWidget(slider,0,0);
+
+        slider = new FancySlider(Qt::Vertical);
+        slider->setFocusPolicy(Qt::StrongFocus);
+        slider->setTickPosition(QSlider::TicksBothSides);
+        slider->setTickInterval(10);
+        slider->setSingleStep(10);
+        slider->setMaximum(20);
+        slider->setMinimum(3);
+        slider->setSliderPosition(Settings::net.w/32);
+
+        connect(slider,QOverload<int>::of(&QSlider::valueChanged),this,&SettingsWidget::updateSliderTwo);
+
+        sliderLayout->addWidget(slider,0,1);
+
+
+        sliders->setLayout(sliderLayout);
+
+
+        container->addWidget(ticks);
+        container->addWidget(buttons);
+        container->addWidget(sliders);
+
+        setLayout(container);
+
+    }
+
+    void SettingsWidget::updateDetectionRate(int value){
+        value = (std::max)(1,value);
+        Workers::detect->setRate(value);
+    }
+    void SettingsWidget::updateCaptureRate(int value){
+        value = (std::max)(1,value);
+        Workers::capture->setRate(value);
+    }
+    void SettingsWidget::updateThresh(int value){
+        Settings::detection.thresh = value;
+    }
+
+    void SettingsWidget::updateSense(int value){
+        Workers::mouseWorker->setSensitivity(value);
+    }
+
+    void SettingsWidget::updateSlider(int value){
+        Settings::net.h = value * 32;
+        Settings::processSettings();
+    }
+
+    void SettingsWidget::updateSliderTwo(int value){
+        Settings::net.w = value * 32;
+        Settings::processSettings();
+    }
+
+    void SettingsWidget::setLimit(bool value){
+        Workers::setLimit(value);
+    }
+
+    void SettingsWidget::startButton(){
+        Workers::start();
+    }
+
+    void SettingsWidget::switchButton(){
+        Workers::apiworker->switchTeams();
+    }
+
+    void SettingsWidget::reloadButton(){
+        Workers::apiworker->reload();
+    }
+
+    void SettingsWidget::benchmarkButton(){
+        Workers::detect->benchmark();
+    }
+
 }
-
-void SettingsWidget::updateDetectionRate(int value) {
-    value = (std::max)(1, value);
-    Workers::detect->setRate(value);
-}
-void SettingsWidget::updateCaptureRate(int value) {
-    value = (std::max)(1, value);
-    Workers::capture->setRate(value);
-}
-void SettingsWidget::updateThresh(int value) { Settings::detection.thresh = value; }
-
-void SettingsWidget::updateSense(int value) { Workers::mouseWorker->setSensitivity(value); }
-
-void SettingsWidget::updateSlider(int value) {
-    Settings::net.h = value * 32;
-    Settings::processSettings();
-}
-
-void SettingsWidget::updateSliderTwo(int value) {
-    Settings::net.w = value * 32;
-    Settings::processSettings();
-}
-
-void SettingsWidget::setLimit(bool value) { Workers::setLimit(value); }
-
-void SettingsWidget::startButton() { Workers::start(); }
-
-void SettingsWidget::switchButton() { Workers::apiworker->switchTeams(); }
-
-void SettingsWidget::reloadButton() { Workers::apiworker->reload(); }
-
-void SettingsWidget::benchmarkButton() { Workers::detect->benchmark(); }
-
-void SettingsWidget::trainButton() { Workers::startTrain(); }
-
-} // namespace GUI

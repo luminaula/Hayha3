@@ -6,7 +6,7 @@ ignore(0.365,0.50,0.12,0.5)
 ignore(0.4,0.40,0.05,0.15)
 --]]
 
-local saveTime = 0
+
 
 
 clearTeams()
@@ -52,9 +52,9 @@ function loadWeapon2(name)
 end
 
 
-weapon = loadWeapon("ak47")
-weapon2 = loadWeapon("tap")
-setWeapon("ak47")
+weapon2 = loadWeapon("ak47")
+weapon = loadWeapon("tap")
+setWeapon("tap")
 function target ()
 
 
@@ -83,9 +83,7 @@ end
 function aim (x)
     --if checkKey(0xA0) or checkKey(0xA2) then
 
-    --setCaptureCenter(x.x + x.w * 0.5, x.y + x.h * 0.5, 100000)
-
-    --weapon.triggerbot(x)
+    weapon.triggerbot(x)
     weapon.aimbot(x)
 
         
@@ -111,5 +109,4 @@ function keyMain()
         weapon = loadWeapon("tap")
         setWeapon("tap")
     end
-
 end

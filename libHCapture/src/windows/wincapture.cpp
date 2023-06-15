@@ -62,7 +62,6 @@ POINT                           m_lastMousePos;
 HDC hScreen;
 HDC hdcMem;
 HWND hProcess;
-DWORD hProcessID;
 HBITMAP hBitmap;
 uint32_t bitmapW,bitmapH;
 HGDIOBJ hOld;
@@ -265,8 +264,6 @@ void initGDI(int width, int height){
     hProcess = FindWindow(NULL,captureTarget.c_str());
     if(hProcess == NULL)
         return;
-    hProcessID = GetWindowThreadProcessId(hProcess,NULL);
-
     hScreen = GetWindowDC(hProcess);
     //hScreen = GetDC(GetDesktopWindow());
     hdcMem = CreateCompatibleDC (hScreen);
@@ -290,11 +287,9 @@ void initGDI(int width, int height){
 }
 
 void deInitGDI(){
-    if(initedGDI){
-        initedGDI = false;
-        DeleteObject(hBitmap);
-        DeleteDC(hdcMem);
-    }
+    initedGDI = false;
+    DeleteObject(hBitmap);
+    DeleteDC(hdcMem);
 }
 
 void reinitGDI(int width, int height){
@@ -317,13 +312,19 @@ void reinitGDI(int width, int height){
 void *captureGDI(unsigned char *buffer,int x,int y, int width,int height){
     static uint32_t counter = 0;
 
+    if(counter++ % 25 == 0){
+        HWND win = FindWindow(NULL,captureTarget.c_str());
+        if(win == NULL){
+            if(initedGDI){
+                deInitGDI();
+            }
+            return buffer;
+        }
+    }
+    
+
     if(!initedGDI){
         initGDI(416,416);
-        return buffer;
-    }
-
-    if(!IsWindow(hProcess)){
-        deInitGDI();
         return buffer;
     }
 
@@ -392,7 +393,6 @@ void *captureDXGI(unsigned char *buffer,int x,int y, int width,int height){
             //printf("Error\n");
             std::this_thread::sleep_for(std::chrono::seconds(10));
             initDXGI();
-            return buffer;
         }
         //fb.m_beginCapture = getCurrentTimeMicro();
         break;
@@ -493,7 +493,6 @@ void Error(void *e){
 }
 
 bool isAttached(){
-    if(hProcess == GetForegroundWindow())
-        return true;
-    return false;
+    bool ret = IsWindowVisible(hProcess);
+    return ret;
 }

@@ -1,14 +1,14 @@
-#include "mainwindow.h"
 #include <QWidget>
+#include "mainwindow.h"
 
-namespace GUI {
+namespace GUI{
 
-class FileWidget : public QWidget {
-    Q_OBJECT
-  public:
-    FileWidget(MainWindow *main);
-  private slots:
-  private:
-};
+    class FileWidget : public QWidget{
+        Q_OBJECT
+    public:
+        FileWidget(MainWindow *main);
+    private slots:
+    private:
+    };
 
-} // namespace GUI
+}

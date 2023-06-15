@@ -18,13 +18,6 @@ find_package(OpenCV REQUIRED)
 
 find_package(Threads REQUIRED)
 
-find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(GLUT REQUIRED)
-#find_package(assimp REQUIRED)
-
-include_directories(${GLEW_INCLUDE_DIRS}  ${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIR} ${ASSIMP_INCLUDE_DIR})
-
 set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -38,7 +31,7 @@ add_executable(cropper ${CROPPER})
 add_executable(blender ${BLENDER})
 
 
-target_link_libraries(gen assimp HCore ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${OpenCV_LIBRARIES} ${GLEW_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(gen assimp z m dl glut GL HCore ${OpenCV_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cropper HCore ${OpenCV_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(blender HCore ${OpenCV_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-install(TARGETS gen blender cropper RUNTIME DESTINATION bin/)
+install(TARGETS gen cropper blender RUNTIME DESTINATION bin/)

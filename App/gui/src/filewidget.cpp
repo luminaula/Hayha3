@@ -1,18 +1,19 @@
 #include "filewidget.hpp"
-#include "filesystem.hpp"
-#include "settings.hpp"
-#include <QGridLayout>
 #include <QLabel>
+#include <QGridLayout>
+#include "settings.hpp"
+#include "filesystem.hpp"
 #include <string>
 
-namespace GUI {
+namespace GUI{
 
-FileWidget::FileWidget(MainWindow *main) : QWidget(main) {
+    FileWidget::FileWidget(MainWindow *main):
+            QWidget(main){
+        
+        QGridLayout *layout = new QGridLayout;
+        std::string libfile = OS::libPath + OS::libPrefix + Settings::net.libFile + OS::libSuffix;
+        layout->addWidget(new QLabel(tr(libfile.c_str())));
+        setLayout(layout);
+    }
 
-    QGridLayout *layout = new QGridLayout;
-    std::string libfile = OS::libPath + OS::libPrefix + Settings::net.libFile + OS::libSuffix;
-    layout->addWidget(new QLabel(tr(libfile.c_str())));
-    setLayout(layout);
 }
-
-} // namespace GUI

@@ -3,68 +3,67 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
-#include "bbox.hpp"
-#include "framebuffer.hpp"
-#include <QOpenGLBuffer>
-#include <QOpenGLFunctions>
 #include <QOpenGLWidget>
-#include <QPainter>
-#include <QPushButton>
+#include <QOpenGLFunctions>
+#include <QOpenGLBuffer>
 #include <QTime>
 #include <QVector>
+#include <QPushButton>
+#include <QPainter>
 #include <QWidget>
+#include "framebuffer.hpp"
+#include "bbox.hpp"
 
-namespace GUI {
 
-class MainWindow;
+namespace GUI{
 
-class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions {
-    Q_OBJECT
-  public:
-    GLWidget();
-    ~GLWidget();
+    class MainWindow;
 
-  public slots:
 
-  private slots:
+    class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions{
+        Q_OBJECT
+    public:
+        GLWidget();
+        ~GLWidget();
 
-  protected:
-    void paintGL() override;
-    void initializeGL() override;
+    public slots:
 
-  private:
-    void printStats(Framebuffer &fb);
-    void drawDetections(Framebuffer &fb);
-    bbox_t translateBox(bbox_t det, Framebuffer &fb);
+    private slots:
 
-    void drawTarget(Framebuffer &fb);
+    protected:
+        void paintGL() override;
+        void initializeGL() override;
 
-    int m_width;
-    int m_height;
+    private:
 
-    std::vector<QImage> images;
-    
-    QPainter painter;
+        void printStats(Framebuffer &fb);
+        void drawDetections(Framebuffer &fb);
+        bbox_t translateBox(bbox_t det,Framebuffer &fb);
 
-    QTimer *m_timer;
-    MainWindow *mainWindow;
-};
+        void drawTarget(Framebuffer &fb);
 
-class DetectionWindow : public QWidget {
-    Q_OBJECT
-  public:
-    DetectionWindow(MainWindow *mw);
+        int m_width;
+        int m_height;
 
-  protected:
-  private slots:
-    void updateIntervalChanged(int value);
+        QImage m_image;
+        QPainter painter;
+    };
 
-  private:
-    GLWidget *m_glWidget;
-    QTimer *m_timer;
-    MainWindow *mainWindow;
-};
+    class DetectionWindow : public QWidget{
+        Q_OBJECT
+    public:
+        DetectionWindow(MainWindow *mw);
 
-} // namespace GUI
+    protected:
+
+    private slots:
+        void updateIntervalChanged(int value);
+    private:
+        GLWidget *m_glWidget;
+        QTimer *m_timer;
+        MainWindow *mainWindow;
+    };
+
+}
 
 #endif

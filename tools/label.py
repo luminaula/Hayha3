@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import os
 import random
+import cv2
 import sys
 
 

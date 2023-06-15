@@ -11,17 +11,19 @@
         "Precision" : "FLOAT",
         "Profile" : "de_dust3"
     },
+    "Screen" : {
+        "Width" : 3840,
+        "Height" : 2160
+    },
     "Capture" : {
-        "Rate" : 60,
-        "Format" : "RGB",
+        "Rate" : 120,
         "X" : 0,
         "Y" : 0,
-        "Width" : 2560,
-        "Height" : 1440,
-        "CaptureDetectionArea" : true,
+        "Width" : 3840,
+        "Height" : 2160,
+        "CaptureDetectionArea" : false,
         "DXGI" : true,
-        "Window" : "Counter-Strike: Global Offensive",
-        "X11Window" : "Counter-Strike: Global Offensive - OpenGL",
+        "Window" : "Counter-Strike: Global Offensive - OpenGL",
         "Async" : false
     },
     "Detect" : {
@@ -30,32 +32,28 @@
         "Y" : 396,
         "Width" : 512,
         "Height" : 288,
-        "Thresh" : 55,
+        "Thresh" : 40,
         "Center" : true,
         "UseNetResolution" : true,
         "NetRatio" : 1.0,
-        "AroundMouse" : true,
+        "AroundMouse" : false,
         "Remote" : false,
         "IP" : "127.0.0.1"
     },
-    "Train" : {
-        "Library" : "HNetCUDNN",
-        "GPUs" : [0]
-    },
     "Display" : {
-        "Enabled" : false,
-        "Rate" : 30,
+        "Enabled" : true,
+        "Rate" : 144,
         "Width" : 1600,
         "Height" : 900
     },
     "Overlay" : {
-        "Enabled" : false,
+        "Enabled" : true,
         "Rate" : 25,
-        "ShowStats" : true,
-        "ShowArea" : true
+        "ShowStats" : true
     },
     "Scripts" : {
-        "Entry" : "Entry.lua"
+        "Entry" : "Entry.lua",
+        "Weapon" : "ak47"
     }
 
 }

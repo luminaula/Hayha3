@@ -57,7 +57,6 @@ public:
 
     virtual void work(){}
     void singleLoop();
-    void singleLoopAsync();
     void workerThread();
     void workerEventThread(timeStamp sTime);
 

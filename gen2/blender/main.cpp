@@ -13,7 +13,7 @@
 
 using namespace cv;
 
-#define AMOUNT 128000
+#define AMOUNT 25600
 #define MIN_OBJS_PER_IMAGE 1
 #define OBJS_PER_IMG 4
 
@@ -22,14 +22,12 @@ std::vector<std::string> foreGrounds;
 std::vector<std::string> masks;
 std::vector<std::string> foreGroundClassName;
 
-std::string destinationImgFolder = "../dataset/images/";
-std::string destinationAnnFolder = "../dataset/annotations/";
+std::string destinationImgFolder = "/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/chicken/final/images/";
+std::string destinationAnnFolder = "/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/chicken/final/annotations/";
 
-int minHead = 3 * 3;
-int minHeight = 4;
+int minHead = 5 * 5;
 
 HCore::HCore *core;
-HCore::HCore *auxCore;
 int tries = 3;
 
 struct ObjectAnnotation{
@@ -44,71 +42,6 @@ struct Annotation{
     std::vector<ObjectAnnotation> heads;
     int w,h;
 };
-
-int findXmin(Mat &image){
-    for(int x=0;x<image.cols;x++){
-        for(int y=0;y<image.rows;y++){
-            uint32_t alpha = image.at<Vec4b>(y,x)[3];
-            if(alpha == 0xff)
-                return x;
-        }
-    }
-}
-
-int findYmin(Mat &image){
-    for(int y=0;y<image.rows;y++){
-        for(int x=0;x<image.cols;x++){
-            uint32_t alpha = image.at<Vec4b>(y,x)[3];
-            if(alpha == 0xff)
-                return y;
-        }
-    }
-}
-
-int findXmax(Mat &image){
-    for(int i=image.cols-1;i>0;i--){
-        for(int j=0;j<image.rows;j++){
-            uint32_t alpha = image.at<Vec4b>(j,i)[3];
-            if(alpha == 0xff)
-                return i;
-        }
-    }
-}
-
-int findYmax(Mat &image){
-    for(int i=image.rows-1;i>0;i--){
-        for(int j=0;j<image.cols;j++){
-            uint32_t alpha = image.at<Vec4b>(i,j)[3];
-            if(alpha == 0xff)
-                return i;
-        }
-    }
-}
-
-Mat recrop(Mat &image){
-
-    int xmi,ymi,xma,yma;
-
-    auto xmin = auxCore->tPool->enqueue(findXmin,image);
-    auto ymin = auxCore->tPool->enqueue(findYmin,image);
-    auto xmax = auxCore->tPool->enqueue(findXmax,image);
-    auto ymax = auxCore->tPool->enqueue(findYmax,image);
-    
-    xmin.wait();
-    ymin.wait();
-    xmax.wait();
-    ymax.wait();
-
-    xmi = xmin.get();
-    xma = xmax.get();
-    ymi = ymin.get();
-    yma = ymax.get();
-
-    Rect ROI(xmi,ymi,xma-xmi,yma-ymi);
-
-    return image(ROI);
-}
-
 
 float inline lerp(float s, float e, float t){
     return s+(e-s)*t;
@@ -147,35 +80,6 @@ void aBlend(Mat &src, Mat &dest, int x,int y, int w, int h){
                 destVec[0] = asd[0];
                 destVec[1] = asd[1];
                 destVec[2] = asd[2];
-                dest.at<Vec3b>(j,i) = destVec;
-            }
-
-            
-            srcy++;
-        }
-        srcx++;
-        srcy=0;
-    }
-
-}
-
-void aBlendHead(Mat &src, Mat &mask, Mat &dest, int x,int y, int w, int h){
-    int srcx = 0;
-    int srcy = 0;
-    for(int i=x;i<x+w;i++){
-        for(int j=y;j<y+h;j++){
-            Vec4b asd = mask.at<Vec4b>(srcy,srcx);
-            Vec4b srxpic = src.at<Vec4b>(srcy,srcx);
-            uint8_t srcb = (uint8_t)asd[0];
-            uint8_t srcg = (uint8_t)asd[1];
-            uint8_t srcr = (uint8_t)asd[2];
-            uint8_t srca = (uint8_t)asd[3];
-
-            if((asd[2] & 0xff) == 0xff){
-                Vec3b destVec;
-                destVec[0] = srxpic[0];
-                destVec[1] = srxpic[1];
-                destVec[2] = srxpic[2];
                 dest.at<Vec3b>(j,i) = destVec;
             }
 
@@ -276,9 +180,8 @@ ObjectAnnotation getHeadAnnotation(Mat &mask){
     return head;
 }
 
-
-
 void createImage(uint32_t count){
+    std::cout << count << std::endl;
     uint32_t destIndex = rand() % backGrounds.size();
     uint32_t objs = rand() % (OBJS_PER_IMG - MIN_OBJS_PER_IMAGE) + MIN_OBJS_PER_IMAGE;
     Mat destt = imread(backGrounds.at(destIndex));
@@ -296,113 +199,39 @@ void createImage(uint32_t count){
     annotations.h = dest.rows;
     int i = 0;
     int tried = 0;
-
     do{
-        if(widthUsed >= dest.cols * 0.8){
+        if(widthUsed >= dest.cols * 0.8)
             goto end;
-
-        }
         ObjectAnnotation ann = {0};
         uint32_t srcIndex = rand() % foreGrounds.size();
-        Mat src = imread(foreGrounds.at(srcIndex), IMREAD_UNCHANGED );
-        Mat mask = imread(masks.at(srcIndex), IMREAD_UNCHANGED);
-
-
-        if(!(rand() % 5)){
-            float leftCrop,rightCrop,upCrop,downCrop;
-
-            leftCrop = randFloat(-0.4,0.4);
-            rightCrop = randFloat(-0.4,0.4);
-            upCrop = randFloat(-0.4,0.4);
-            downCrop = randFloat(-0.4,0.4);
-
-            int xmi,ymi,xma,yma;
-
-            if(leftCrop > 0.0){
-                xmi = src.cols * leftCrop;
-            }
-            else{
-                xmi = 0;
-            }
-            
-            if(rightCrop > 0.0){
-                xma = src.cols - src.cols * rightCrop;
-            }
-            else{
-                xma = src.cols;
-            }
-
-            if(upCrop > 0.0){
-                ymi = src.rows * upCrop;
-            }
-            else{
-                ymi = 0;
-            }
-
-            if(downCrop > 0.0){
-                yma = src.rows - src.rows * downCrop;
-            }
-            else{
-                yma = src.rows;
-            }
-
-            
-
-            Rect ROI(xmi,ymi,xma-xmi,yma-ymi);
-
-            
-
-
-            
-
-            Mat maskk = mask(ROI);
-            Mat srcc = src(ROI);
-
-            src = recrop(srcc);
-            mask = recrop(maskk);
-
-        }
-
-
-
-        float resizef = randFloat(minHeight / src.rows,0.5);
-        
-        
-        try{
-            cv::resize(src,src,Size(),resizef,resizef);
-            cv::resize(mask,mask,Size(),resizef,resizef);
-        }
-        catch(...){
-            printf("Vittu\n");
+        Mat srcc = imread(foreGrounds.at(srcIndex), IMREAD_UNCHANGED );
+        Mat maskk = imread(masks.at(srcIndex), IMREAD_UNCHANGED);
+        if(srcc.cols > srcc.rows)
+            continue;
+        Mat src;
+        Mat mask;
+        float resizef = randFloat(0.2,1.0);
+        resize(srcc,src,Size(),resizef,resizef);
+        resize(maskk,mask,Size(),resizef,resizef);
+        if(src.rows * src.cols < 200){
             continue;
         }
-        
-        
-        
-        if(src.rows * src.cols < 10){
+        if(src.rows >= dest.rows || src.cols >= dest.cols)
             continue;
-        }
-        if(src.rows >= dest.rows || src.cols >= dest.cols){
-            continue;
-        }    
         ann.xmin = widthUsed;
         ann.ymin = rand() % (height-src.rows);
         ann.ymax = std::min(ann.ymin+src.rows,dest.rows-1);
         ann.xmax = std::min(ann.xmin+src.cols,dest.cols-1);
         ann.name = foreGroundClassName.at(srcIndex);
 
-        if(ann.xmax - ann.xmin < 3 || ann.ymax - ann.ymin < 3)
-            break;
-
-        if(ann.xmax == dest.cols-1){
-            break;
-
-        }
+        if(ann.xmax == dest.cols-1)
+            continue;
 
         //std::cout << "\tForeground = " << foreGrounds.at(srcIndex) << " Type " << foreGroundClassName.at(srcIndex) << std::endl;
         //std::cout << "\t\txmin " << ann.xmin << " ymin " << ann.ymin << " xmax " << ann.xmax << " ymax " << ann.ymax << std::endl;
+        aBlend(src,dest,ann.xmin,ann.ymin,ann.xmax-ann.xmin,ann.ymax-ann.ymin);
 
-        
+        annotations.objects.push_back(ann);
 
         if(hasHead(mask)){
             ObjectAnnotation headAnn = getHeadAnnotation(mask);
@@ -411,56 +240,23 @@ void createImage(uint32_t count){
             headAnn.ymin = std::min(ann.ymin + headAnn.ymin,dest.rows);
             headAnn.ymax = std::min(ann.ymin + headAnn.ymax,dest.rows);
             headAnn.name = foreGroundClassName.at(srcIndex) + "head";
-            if(!(headAnn.xmin == headAnn.xmax || headAnn.ymin == headAnn.ymax)){
+            if(!(headAnn.xmin == headAnn.xmax || headAnn.ymin == headAnn.ymax))
                 annotations.heads.push_back(headAnn);
-                aBlendHead(src,mask,dest,ann.xmin,ann.ymin,ann.xmax-ann.xmin,ann.ymax-ann.ymin);
-            }
         }
-        if(rand() % 2){
-            aBlend(src,dest,ann.xmin,ann.ymin,ann.xmax-ann.xmin,ann.ymax-ann.ymin);
-            annotations.objects.push_back(ann);
-        }
+
         i++;
         widthUsed = ann.xmax;
         int interWidth = ann.xmax - ann.xmin;
-        
         interWidth *= 0.15f;
-        if(interWidth){
-            if(rand() % 2){
-                widthUsed += rand() % interWidth;
-            }
-            else{
-                widthUsed -= rand() % interWidth;
-            }
+        if(rand() % 2){
+            widthUsed += rand() % interWidth;
         }
-        
+        else{
+            widthUsed -= rand() % interWidth;
+        }
     }while(true);
     end:
     saveImage(dest, annotations);
-    createAnnotationFile(annotations);
-}
-
-void genBackGround(uint32_t count){
-    uint32_t destIndex = rand() % backGrounds.size();
-    Mat dest = imread(backGrounds.at(destIndex));
-    Annotation annotations;
-    annotations.imgName = "bg" + std::to_string(count) + std::string(".jpg");
-    annotations.annotationName = "bg" + std::to_string(count) + std::string(".xml");
-
-
-    int x,y;
-
-    x = rand() % (dest.cols - 608);
-    y = rand() % (dest.rows - 608);
-
-
-    Rect ROI(x,y,608,608);
-    Mat cropd = dest(ROI);
-
-    annotations.w = cropd.cols;
-    annotations.h = cropd.rows;
-
-    saveImage(cropd,annotations);
     createAnnotationFile(annotations);
 }
 
@@ -487,11 +283,9 @@ int main(){
     std::vector<std::string> backFolders;
     
     core = HCore::init(16,1);
-    auxCore = new HCore::HCore(16,1);
 
-    foreFolders.push_back("/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/cropped/leet/img/");
-    foreFolders.push_back("/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/cropped/idf/img/");
-    
+    foreFolders.push_back("/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/chicken/crop/img/");
+
     
     backFolders.push_back("/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/backgrounds/dust/img/");
     backFolders.push_back("/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/backgrounds/cache/img/");
@@ -518,9 +312,6 @@ int main(){
                     masks.push_back(maskpath);
                     foreGrounds.push_back(filepath);
                     foreGroundClassName.push_back(std::to_string(id));
-
-                    std::cout << filepath << std::endl << maskpath << std::endl;
-
                 }
             }
         }
@@ -550,7 +341,6 @@ int main(){
 
     for(int i=0;i<AMOUNT;i++){
         core->tPool->enqueueBlocking(key,createImage,i);
-        core->tPool->enqueueBlocking(key,genBackGround,i);
         //createImage(i);
         
     }

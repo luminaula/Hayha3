@@ -1,6 +1,0 @@
-{
-"Train" : {
-    "Library" : "HNetCUDA",
-    "GPUs" : [0]
-}
-}

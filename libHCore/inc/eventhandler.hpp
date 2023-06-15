@@ -64,9 +64,6 @@ namespace HCore{
             HEvent event;
             event.m_time = eTime;
             event.m_task = std::make_shared< std::packaged_task<void()> >(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-            if(epoch > 60*30 * 1000000){ //30 minutes max recurring time for now
-                epoch = 60*30 * 1000000;
-            }
             event.m_epoch = epoch;
             event.m_id = m_recurringEventCounter++;
             m_recurringEventFlags[event.m_id] = true;

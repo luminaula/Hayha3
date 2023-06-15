@@ -5,22 +5,29 @@
 
 #define FRAMEBUFFER_COUNT 64
 
-namespace HBuffer {
 
-enum Stage_t { CAPTURE, DETECT, PRESENT };
+namespace HBuffer{
 
-extern std::vector<Framebuffer> framebuffers;
+    enum Stage_t{
+        CAPTURE,
+        DETECT,
+        PRESENT
+    };
 
-void init(uint32_t count);
+    extern std::vector<Framebuffer> framebuffers;
 
-void resize(int index);
-Framebuffer &getFramebuffer(uint32_t index);
-Framebuffer &getFramebuffer(Stage_t stage);
-void nextFramebuffer(Stage_t stage);
+    void init(uint32_t count);
+    
+    void resize(int index);
+    Framebuffer &getFramebuffer(uint32_t index);
+    Framebuffer &getFramebuffer(Stage_t stage);
+    void nextFramebuffer(Stage_t stage);
 
-void finishCapture(int id);
-void finishDetect(int id);
+    void finishCapture(int id);
+    void finishDetect(int id);
 
-} // namespace HBuffer
+}
+
+
 
 #endif

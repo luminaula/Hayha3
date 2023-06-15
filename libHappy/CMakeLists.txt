@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_INSTALL_PREFIX "Hayha")
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 set(include_path "${CMAKE_CURRENT_SOURCE_DIR}/inc")
 set(include_path_api "${CMAKE_CURRENT_SOURCE_DIR}/inc/api")
 set(include_path_ext "${CMAKE_CURRENT_SOURCE_DIR}/inc/external")

@@ -28,7 +28,6 @@ int m_height, m_width;
 
 bool m_windowFound = false;
 bool m_shmInited = false;
-bool m_inited = false;
 int err;
 
 std::string m_captureTarget;
@@ -94,25 +93,20 @@ Window XfindWindow(const char *windowName){
         return 0;
     for(uint32_t i=0;i<lenn;i++){
         name = winame(m_display,win[i]);
-        if(!name){
-            XFree(win);
+        if(!name)
             return 0;
-        }
         if(strcmp(name,windowName) == 0){
-            XFree(name);
-            XFree(win);
+            free(name);
             return win[i];
         }
-        XFree(name);
+        free(name);
     }
-    XFree(win);
     return 0;
 
 }
 
 void initShm(int width,int height){
-    if(m_shmInited)
-        return;
+    
     XGetWindowAttributes(m_display, m_window, &m_window_attributes);
     m_screen = m_window_attributes.screen;
     m_ximg = XShmCreateImage(m_display, DefaultVisualOfScreen(m_screen),DefaultDepthOfScreen(m_screen),ZPixmap, NULL, &m_shminfo, width, height);
@@ -136,11 +130,6 @@ void deinitShm(){
 
 
 void init(int width, int height){
-    if(m_inited){
-        initShm(width,height);
-        return;
-    }
-        
     m_display = XOpenDisplay(nullptr);
     m_root = DefaultRootWindow(m_display);
     Window win = XfindWindow(m_captureTarget.c_str());
@@ -153,29 +142,24 @@ void init(int width, int height){
         m_windowFound = false;
     }
     initShm(width,height);
-    m_inited = true;
 }
 
 void deinit(){
-    if(!m_inited)
-        return;
-    if(m_shmInited)
-        deinitShm();
     XCloseDisplay(m_display);
-    m_inited = false;
 }
 
 
 void* captureFrame(unsigned char *buffer,int x, int y, int width, int height){
     static int counter = 0;
-    if(!m_windowFound){
+    if(counter++ % 25 == 0 && !m_windowFound){
         Window win = XfindWindow(m_captureTarget.c_str());
         if(win){
             deinitShm();
             deinit();
             init(width,height);
+            initShm(width,height);
         }
-        return buffer;
+
     }
     
     if(width != m_width || height != m_height){
@@ -228,14 +212,7 @@ void Error(void *e){
             break;
     }
 }
-#include <iostream>
 
 bool isAttached(){
-    Window win = XfindWindow(m_captureTarget.c_str());
-    if(!win)
-        return false;
-    if(getprop(m_display,"_NET_WM_STATE",win) == 75)
-        return false;
-
-    return true;
+    return m_windowFound;
 }

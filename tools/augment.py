@@ -8,6 +8,9 @@ from albumentations import *
 
 from multiprocessing import Process
 
+BOX_COLOR = (255, 0, 0)
+TEXT_COLOR = (255, 255, 255)
+
 classes = ["0","1","0head","1head"]
 
 imageFolder = "images"
@@ -28,6 +31,9 @@ pbar = tqdm(total=len(files))
 
 def get_aug(aug, min_area=0., min_visibility=0.):
     return Compose(aug, bbox_params={'format': 'pascal_voc', 'min_area': min_area, 'min_visibility': min_visibility, 'label_fields': ['category_id']})
+
+
+
 
 
 
@@ -63,9 +69,9 @@ def process_images(annotations):
         RandomContrast(),
         RandomGamma()
     ],p=0.8),
-    RGBShift(p=0.1),
+    #RGBShift(p=0.1),
 
-    HueSaturationValue(p=0.1),
+    #HueSaturationValue(p=0.1),
     OneOf([
         Blur(),
         MedianBlur(),

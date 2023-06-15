@@ -4,8 +4,7 @@
 #include <math.h>
 
 
-
-#include <GL/glew.h>
+#include <GL/gl.h>
 #include <GL/freeglut.h>
 
 
@@ -30,7 +29,6 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 #include "hcore.hpp"
-#include "gmath.hpp"
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -60,10 +58,7 @@ int dobackface = 1;
 int dotwosided = 1;
 int doperspective = 1;
 
-int screenw = 4000, screenh = 4000;
-
-unsigned int fbo, rbo_color, rbo_depth;
-
+int screenw = 2560, screenh = 1440;
 int mousex, mousey, mouseleft = 0, mousemiddle = 0, mouseright = 0;
 
 int gridsize = 3;
@@ -84,28 +79,8 @@ std::string savedir;// = "/media/xoxo/2f03a838-cd91-4e2b-bfbb-968314f77511/saved
 std::string prefix;
 
 HCore::HCore *core;
-HCore::HCore *auxCore;
 
 unsigned char *zeros;
-
-int vertexcount = 0, facecount = 0; // for statistics only
-
-// opengl (and skinned vertex) buffers for the meshes
-int meshcount = 0;
-int curMesh = 0;
-struct mesh {
-	struct aiMesh *mesh;
-	unsigned int texture;
-	unsigned int maskTexture;
-	unsigned int meshID;
-	int vertexcount, elementcount;
-	float *position;
-	float *normal;
-	float *texcoord;
-	int *element;
-} *meshlist = NULL;
-
-bool drawMask = false;
 
 #ifndef __cplusplus
 typedef struct aiMatrix4x4 aiMatrix4x4;
@@ -121,71 +96,11 @@ Mat screenshot(){
 	glPixelStorei(GL_PACK_ALIGNMENT, (img.step & 3) ? 1 : 4);
 	glPixelStorei(GL_PACK_ROW_LENGTH, img.step/img.elemSize());
 	glReadPixels(0,0,img.cols,img.rows,GL_BGRA,GL_UNSIGNED_BYTE,img.data);
-	return img;
+	Mat flipped;
+	flip(img, flipped, 0);
 
-}
+	return flipped;
 
-int findXmin(const Mat &image){
-    for(int x=0;x<image.cols;x++){
-        for(int y=0;y<image.rows;y++){
-            uint32_t alpha = image.at<Vec4b>(y,x)[3];
-            if(alpha == 0xff)
-                return x;
-        }
-    }
-}
-
-int findYmin(const Mat &image){
-    for(int y=0;y<image.rows;y++){
-        for(int x=0;x<image.cols;x++){
-            uint32_t alpha = image.at<Vec4b>(y,x)[3];
-            if(alpha == 0xff)
-                return y;
-        }
-    }
-}
-
-int findXmax(const Mat &image){
-    for(int i=image.cols-1;i>0;i--){
-        for(int j=0;j<image.rows;j++){
-            uint32_t alpha = image.at<Vec4b>(j,i)[3];
-            if(alpha == 0xff)
-                return i;
-        }
-    }
-}
-
-int findYmax(const Mat &image){
-    for(int i=image.rows-1;i>0;i--){
-        for(int j=0;j<image.cols;j++){
-            uint32_t alpha = image.at<Vec4b>(i,j)[3];
-            if(alpha == 0xff)
-                return i;
-        }
-    }
-}
-
-Mat crop(const Mat &img){
-	int xmi,ymi,xma,yma;
-
-    auto xmin = auxCore->tPool->enqueue(findXmin,img);
-    auto ymin = auxCore->tPool->enqueue(findYmin,img);
-    auto xmax = auxCore->tPool->enqueue(findXmax,img);
-    auto ymax = auxCore->tPool->enqueue(findYmax,img);
-    
-    xmin.wait();
-    ymin.wait();
-    xmax.wait();
-    ymax.wait();
-
-    xmi = xmin.get();
-    xma = xmax.get();
-    ymi = ymin.get();
-    yma = ymax.get();
-
-	Rect ROI(xmi,ymi,xma-xmi,yma-ymi);
-
-	return img(ROI);
 }
 
 
@@ -272,7 +187,85 @@ unsigned int loadmaterial(struct aiMaterial *material)
  */
 
 // convert 4x4 to column major format for opengl
+void transposematrix(float m[16], aiMatrix4x4 *p)
+{
+	m[0] = p->a1; m[4] = p->a2; m[8] = p->a3; m[12] = p->a4;
+	m[1] = p->b1; m[5] = p->b2; m[9] = p->b3; m[13] = p->b4;
+	m[2] = p->c1; m[6] = p->c2; m[10] = p->c3; m[14] = p->c4;
+	m[3] = p->d1; m[7] = p->d2; m[11] = p->d3; m[15] = p->d4;
+}
 
+void extract3x3(aiMatrix3x3 *m3, aiMatrix4x4 *m4)
+{
+	m3->a1 = m4->a1; m3->a2 = m4->a2; m3->a3 = m4->a3;
+	m3->b1 = m4->b1; m3->b2 = m4->b2; m3->b3 = m4->b3;
+	m3->c1 = m4->c1; m3->c2 = m4->c2; m3->c3 = m4->c3;
+}
+
+void mixvector(aiVector3D *p, aiVector3D *a, aiVector3D *b, float t)
+{
+	p->x = a->x + t * (b->x - a->x);
+	p->y = a->y + t * (b->y - a->y);
+	p->z = a->z + t * (b->z - a->z);
+}
+
+float dotquaternions(aiQuaternion *a, aiQuaternion *b)
+{
+	return a->x*b->x + a->y*b->y + a->z*b->z + a->w*b->w;
+}
+
+void normalizequaternion(aiQuaternion *q)
+{
+	float d = sqrt(dotquaternions(q, q));
+	if (d >= 0.00001) {
+		d = 1 / d;
+		q->x *= d;
+		q->y *= d;
+		q->z *= d;
+		q->w *= d;
+	} else {
+		q->x = q->y = q->z = 0;
+		q->w = 1;
+	}
+}
+
+void mixquaternion(aiQuaternion *q, aiQuaternion *a, aiQuaternion *b, float t)
+{
+	aiQuaternion tmp;
+	if (dotquaternions(a, b) < 0) {
+		tmp.x = -a->x; tmp.y = -a->y; tmp.z = -a->z; tmp.w = -a->w;
+		a = &tmp;
+	}
+	q->x = a->x + t * (b->x - a->x);
+	q->y = a->y + t * (b->y - a->y);
+	q->z = a->z + t * (b->z - a->z);
+	q->w = a->w + t * (b->w - a->w);
+	normalizequaternion(q);
+}
+
+void composematrix(aiMatrix4x4 *m, aiVector3D *t, aiQuaternion *q, aiVector3D *s)
+{
+	// quat to rotation matrix
+	m->a1 = 1 - 2 * (q->y * q->y + q->z * q->z);
+	m->a2 = 2 * (q->x * q->y - q->z * q->w);
+	m->a3 = 2 * (q->x * q->z + q->y * q->w);
+	m->b1 = 2 * (q->x * q->y + q->z * q->w);
+	m->b2 = 1 - 2 * (q->x * q->x + q->z * q->z);
+	m->b3 = 2 * (q->y * q->z - q->x * q->w);
+	m->c1 = 2 * (q->x * q->z - q->y * q->w);
+	m->c2 = 2 * (q->y * q->z + q->x * q->w);
+	m->c3 = 1 - 2 * (q->x * q->x + q->y * q->y);
+
+	// scale matrix
+	m->a1 *= s->x; m->a2 *= s->x; m->a3 *= s->x;
+	m->b1 *= s->y; m->b2 *= s->y; m->b3 *= s->y;
+	m->c1 *= s->z; m->c2 *= s->z; m->c3 *= s->z;
+
+	// set translation
+	m->a4 = t->x; m->b4 = t->y; m->c4 = t->z;
+
+	m->d1 = 0; m->d2 = 0; m->d3 = 0; m->d4 = 1;
+}
 
 /*
  * Init, animate and draw aiScene.
@@ -282,7 +275,19 @@ unsigned int loadmaterial(struct aiMaterial *material)
  * resulting meshes during skeletal animation here.
  */
 
+int vertexcount = 0, facecount = 0; // for statistics only
 
+// opengl (and skinned vertex) buffers for the meshes
+int meshcount = 0;
+struct mesh {
+	struct aiMesh *mesh;
+	unsigned int texture;
+	int vertexcount, elementcount;
+	float *position;
+	float *normal;
+	float *texcoord;
+	int *element;
+} *meshlist = NULL;
 
 // find a node by name in the hierarchy (for anims and bones)
 struct aiNode *findnode(struct aiNode *node, char *name)
@@ -349,40 +354,6 @@ void transformmesh(struct aiScene *scene, struct mesh *mesh)
 	}
 }
 
-unsigned int loadMask(){
-	unsigned int texture;
-	unsigned int color;
-	unsigned char *c = (unsigned char*)&color;
-	unsigned char a,r,g,b;
-
-	a = 0xff;
-	r = curMesh * 64;
-	g = curMesh * 32;
-	b = 128 + curMesh * 16 + curMesh;
-
-	c[0] = b;
-	c[1] = r;
-	c[2] = g;
-	c[3] = a;
-
-	unsigned int colors[256*256];
-	for(int i=0;i<256*256;i++){
-		colors[i] = color;
-	}
-
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, colors);
-	//glGenerateMipmap(GL_TEXTURE_2D);
-
-	return texture;
-}
-
 void initmesh(struct aiScene *scene, struct mesh *mesh, struct aiMesh *amesh)
 {
 	int i;
@@ -392,10 +363,7 @@ void initmesh(struct aiScene *scene, struct mesh *mesh, struct aiMesh *amesh)
 
 	mesh->mesh = amesh; // stow away pointer for bones
 
-
-	curMesh++;
 	mesh->texture = loadmaterial(scene->mMaterials[amesh->mMaterialIndex]);
-	mesh->maskTexture = loadMask();
 
 	mesh->vertexcount = amesh->mNumVertices;
 	mesh->position = (float*)calloc(mesh->vertexcount * 3, sizeof(float));
@@ -428,8 +396,6 @@ void initmesh(struct aiScene *scene, struct mesh *mesh, struct aiMesh *amesh)
 		mesh->element[i*3+1] = face->mIndices[1];
 		mesh->element[i*3+2] = face->mIndices[2];
 	}
-
-	
 }
 
 void initscene(struct aiScene *scene)
@@ -443,19 +409,14 @@ void initscene(struct aiScene *scene)
 	}
 }
 
-void drawmesh(struct mesh *mesh, bool mask){
-	if(mask){
+void drawmesh(struct mesh *mesh)
+{
+	if (mesh->texture > 0) {
 		glColor4f(1, 1, 1, 1);
-		glBindTexture(GL_TEXTURE_2D, mesh->maskTexture);
-	}
-	else{
-		if (mesh->texture > 0) {
-			glColor4f(1, 1, 1, 1);
-			glBindTexture(GL_TEXTURE_2D, mesh->texture);
-		} else {
-			glColor4f(0.9, 0.7, 0.7, 1);
-			glBindTexture(GL_TEXTURE_2D, checker_texture);
-		}
+		glBindTexture(GL_TEXTURE_2D, mesh->texture);
+	} else {
+		glColor4f(0.9, 0.7, 0.7, 1);
+		glBindTexture(GL_TEXTURE_2D, checker_texture);
 	}
 	glVertexPointer(3, GL_FLOAT, 0, mesh->position);
 	glNormalPointer(GL_FLOAT, 0, mesh->normal);
@@ -516,37 +477,34 @@ void drawnode(struct aiNode *node, aiMatrix4x4 world)
 
 	*/
 	for(int i=0;i<meshcount;i++){
-		drawmesh(&meshlist[i],drawMask);
+		if(i == targetmesh)
+			continue;
+		drawmesh(&meshlist[i]);
 	}
-	/*
-	if(generate){
-		Mat ss = screenshot();
-		std::string filename = savedir + "img/" + prefix + std::to_string(imgcount) + ".png";
+	Mat ss = screenshot();
+	std::string filename = savedir + "img/" + prefix + std::to_string(imgcount) + ".png";
 
-		
+	
 
-		//core->tPool->enqueuev([&filename,&ss](){
-		//imwrite(filename,ss);
-		drawmesh(&meshlist[targetmesh],false);
-		Mat ss2 = screenshot();
-		//filename = savedir + prefix + std::to_string(imgcount) + ".png";
+	//core->tPool->enqueuev([&filename,&ss](){
+	//imwrite(filename,ss);
+	drawmesh(&meshlist[targetmesh]);
+	Mat ss2 = screenshot();
+	//filename = savedir + prefix + std::to_string(imgcount) + ".png";
 
-		//imgcount++;
+	//imgcount++;
 
-		
-		Mat mask = genMask(ss,ss2);
-		core->tPool->enqueuev([filename,ss2](){
-			imwrite(filename,ss2);
-		});
-		filename = savedir + "mask/" + prefix + std::to_string(imgcount) + "mask" + ".png";
-		//imwrite(filename,mask);
-		core->tPool->enqueuev([filename,mask](){
-			imwrite(filename,mask);
-		});
-		imgcount++;
-
-	}
-	*/
+	
+	Mat mask = genMask(ss,ss2);
+	core->tPool->enqueuev([filename,ss2](){
+		imwrite(filename,ss2);
+	});
+	filename = savedir + "mask/" + prefix + std::to_string(imgcount) + "mask" + ".png";
+	//imwrite(filename,mask);
+	core->tPool->enqueuev([filename,mask](){
+		imwrite(filename,mask);
+	});
+	imgcount++;
 
 }
 
@@ -702,7 +660,7 @@ void setanim(int i)
 	i = MIN(i, g_scene->mNumAnimations - 1);
 	curanim = g_scene->mAnimations[i];
 	animlen = animationlength(curanim);
-	animfps = 30;
+	animfps = 60;
 	animtick = 0;
 	if (animfps < 1)
 		animfps = 30;
@@ -720,7 +678,7 @@ void orthogonal(float fov, float aspect, float znear, float zfar)
 	glOrtho(-fov * aspect, fov * aspect, -fov, fov, znear, zfar);
 }
 
-void drawstring(float x, float y, const char *s)
+void drawstring(float x, float y, char *s)
 {
 	glRasterPos2f(x+0.375, y+0.375);
 	while (*s)
@@ -827,7 +785,9 @@ void special(int key, int x, int y)
 
 void reshape(int w, int h)
 {
-
+	screenw = w;
+	screenh = h;
+	glViewport(0, 0, w, h);
 }
 
 float float_rand( float min, float max )
@@ -837,10 +797,8 @@ float float_rand( float min, float max )
 }
 
 
-
-
-
-void display(void){
+void display(void)
+{
 	if(imgcount >= maxImgCount){
 		std::this_thread::sleep_for(std::chrono::milliseconds(20000));
 		glutLeaveMainLoop();
@@ -850,10 +808,6 @@ void display(void){
 	int time, timestep;
 	int i;
 
-
-	glViewport(0, 0, screenw, screenh);
-
-	drawMask = false;
 
 
 	time = glutGet(GLUT_ELAPSED_TIME);
@@ -875,6 +829,7 @@ void display(void){
 		if (curanim) {
 			if (playing) {
 				animtick = animtick + (timestep/1000.0) * animfps;
+				glutPostRedisplay();
 			}
 			if(generate){
 				setanim(rand() % g_scene->mNumAnimations);
@@ -901,35 +856,28 @@ void display(void){
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_COLOR_MATERIAL);
-	if(generate){
-		light_position[0] = float_rand(-2,2);
-		light_position[1] = float_rand(-2,2);
-		light_position[2] = float_rand(-2,2);
-	}
+	light_position[0] = float_rand(-2,2);
+	light_position[1] = float_rand(-2,2);
+	light_position[2] = float_rand(-2,2);
 	glEnable(GL_LIGHTING);
 
 	glEnable(GL_LIGHT0);
 	//float light_position[4] = { -1, 2, 2, 0 };
 	
-	float aLight;
-	if(generate)
-		aLight = float_rand(0.3,0.5);
-	else
-		aLight = 1.0;
-	
+	float aLight = float_rand(0.3,0.5);
+
 	float a_light_position[4] = { aLight, aLight, aLight, 0 };
 
 
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-	if(generate){
-		for(int i=0;i<1;i++){
-			glEnable(GL_LIGHT1+i);
-			light_position[0] = float_rand(radi * -3 ,radi * 3);
-			light_position[1] = float_rand(radi * -3 ,radi * 3);
-			light_position[2] = float_rand(radi * -3 ,radi * 3);
-			glLightfv(GL_LIGHT1+i, GL_POSITION, light_position);
-		}
+	
+	for(int i=0;i<1;i++){
+		glEnable(GL_LIGHT1+i);
+		light_position[0] = float_rand(radi * -3 ,radi * 3);
+		light_position[1] = float_rand(radi * -3 ,radi * 3);
+		light_position[2] = float_rand(radi * -3 ,radi * 3);
+		glLightfv(GL_LIGHT1+i, GL_POSITION, light_position);
 	}
 	
 	
@@ -941,12 +889,15 @@ void display(void){
 	glRotatef(-camera.yaw, 0, 1, 0);
 	glTranslatef(-camera.center[0], -camera.center[1], -camera.center[2]);
 
-	
-	glEnable(GL_TEXTURE_2D);
+	if (dotexture)
+		glEnable(GL_TEXTURE_2D);
+	else
+		glDisable(GL_TEXTURE_2D);
 
-
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (dowire)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	if (dobackface)
 		glDisable(GL_CULL_FACE);
@@ -955,24 +906,59 @@ void display(void){
 
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, dotwosided);
 
+	doalpha = CLAMP(doalpha, 0, 4);
+	switch (doalpha) {
+	// No alpha transparency.
+	case 0:
+		if (g_scene) drawscene(g_scene);
+		break;
 
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_EQUAL, 1);
-	
-	if (g_scene) drawscene(g_scene);
-	
+	// Alpha test only. Always correct, but aliased and ugly.
+	case 1:
+		glAlphaFunc(GL_GREATER, 0.2);
+		glEnable(GL_ALPHA_TEST);
+		if (g_scene) drawscene(g_scene);
+		glDisable(GL_ALPHA_TEST);
+		break;
 
+	// Quick-and-dirty hack: render with both test and blend.
+	// Background may leak through depending on drawing order.
+	case 2:
+		glAlphaFunc(GL_GREATER, 0.2);
+		glEnable(GL_ALPHA_TEST);
+		glEnable(GL_BLEND);
+		if (g_scene) drawscene(g_scene);
+		glDisable(GL_BLEND);
+		glDisable(GL_ALPHA_TEST);
+		break;
 
-	
+	// For best looking alpha blending, render twice.
+	// Solid parts first to fill the depth buffer.
+	// Transparent parts after, with z-write disabled.
+	// Background is safe, but internal blend order may be wrong.
+	case 3:
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_EQUAL, 1);
+		if (g_scene) drawscene(g_scene);
 
-	glAlphaFunc(GL_LESS, 1);
-	glEnable(GL_BLEND);
-	glDepthMask(GL_FALSE);
-	
-	glDepthMask(GL_TRUE);
-	glDisable(GL_BLEND);
-	glDisable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_LESS, 1);
+		glEnable(GL_BLEND);
+		glDepthMask(GL_FALSE);
+		//if (g_scene) drawscene(g_scene);
+		glDepthMask(GL_TRUE);
+		glDisable(GL_BLEND);
+		glDisable(GL_ALPHA_TEST);
+		break;
 
+	// If we have a multisample buffer, we can get 'perfect' transparency
+	// by using alpha-as-coverage. This does have a few limitations, depending
+	// on the number of samples available you'll get banding or dithering artefacts.
+	case 4:
+		glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		if (g_scene) drawscene(g_scene);
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		break;
+	}
 
 	glDisable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -980,6 +966,16 @@ void display(void){
 
 	glDisable(GL_LIGHTING);
 	glDisable(GL_COLOR_MATERIAL);
+
+	if (doplane) {
+		glBegin(GL_LINES);
+		glColor4f(0.4, 0.4, 0.4, 1);
+		for (i = -gridsize; i <= gridsize; i ++) {
+			glVertex3f(i, 0, -gridsize); glVertex3f(i, 0, gridsize);
+			glVertex3f(-gridsize, 0, i); glVertex3f(gridsize, 0, i);
+		}
+		glEnd();
+	}
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -990,123 +986,14 @@ void display(void){
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-
-	//Mask
-
 	if(generate){
-		Mat ss = screenshot();
-		std::string filename = savedir + "img/" + prefix + std::to_string(imgcount) + ".png";
 
-		
-
-		
-	
-	
-
-		drawMask = true;
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDrawPixels(screenw,screenh,GL_BGRA,GL_UNSIGNED_BYTE,zeros);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		if (doperspective)
-			perspective(50, (float)screenw/screenh, mindist/5, maxdist*5);
-		else
-			orthogonal(camera.distance/2, (float)screenw/screenh, mindist/5, maxdist*5);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_COLOR_MATERIAL);
-
-		glEnable(GL_LIGHTING);
-
-		glEnable(GL_LIGHT0);
-		//float light_position[4] = { -1, 2, 2, 0 };
-		
-
-		aLight = 1.0;
-		
-		float am_light_position[4] = { aLight, aLight, aLight, 0 };
+		//});
 
 
-		
-		
-		glEnable(GL_LIGHT0);
-		glLightfv(GL_LIGHT0,GL_AMBIENT,am_light_position);
-
-		glTranslatef(0, 0, -camera.distance);
-		glRotatef(-camera.pitch, 1, 0, 0);
-		glRotatef(-camera.yaw, 0, 1, 0);
-		glTranslatef(-camera.center[0], -camera.center[1], -camera.center[2]);
-
-		
-		glEnable(GL_TEXTURE_2D);
-
-
-
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-		if (dobackface)
-			glDisable(GL_CULL_FACE);
-		else
-			glEnable(GL_CULL_FACE);
-
-		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, dotwosided);
-
-
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_EQUAL, 1);
-
-
-		if (g_scene) drawscene(g_scene);
-
-		glAlphaFunc(GL_LESS, 1);
-		glEnable(GL_BLEND);
-		glDepthMask(GL_FALSE);
-		
-		glDepthMask(GL_TRUE);
-		glDisable(GL_BLEND);
-		glDisable(GL_ALPHA_TEST);
-
-
-		glDisable(GL_CULL_FACE);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glDisable(GL_TEXTURE_2D);
-
-		glDisable(GL_LIGHTING);
-		glDisable(GL_COLOR_MATERIAL);
-
-		glDisable(GL_DEPTH_TEST);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, screenw, screenh, 0, -1, 1);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
-		std::string mfilename = savedir + "mask/" + prefix + std::to_string(imgcount) + "mask" + ".png";
-		//imwrite(filename,mask);
-		
-		if(imgcount > 0){
-			
-
-
-			Mat mask = screenshot();
-			core->tPool->enqueuev([mfilename,mask](){
-				flip(mask,crop(mask),1);
-				imwrite(mfilename,mask);
-			});
-
-			core->tPool->enqueuev([filename,ss](){
-				imwrite(filename,crop(ss));
-			});
-		}
-		imgcount++;
 	}
+	else
+		std::this_thread::sleep_for(milliseconds(500));
 
 	glColor4f(1, 1, 1, 1);
 	if (g_scene) {
@@ -1115,7 +1002,6 @@ void display(void){
 		if (curanim) {
 			sprintf(buf, "frame %03d / %03d (%d fps)", (int)animtick+1, animlen, animfps);
 			drawstring(8, 18+20, buf);
-			drawstring(8, 18+40, curanim->mName.C_Str());
 		}
 	} else {
 		drawstring(8, 18, "No model loaded!");
@@ -1123,13 +1009,25 @@ void display(void){
 
 	if (showhelp) {
 		#define Y(n) 18+40+n*16
-		
+		glColor4f(1, 1, 0.5, 1);
+		drawstring(8, Y(0), "a - change transparency mode");
+		drawstring(8, Y(1), "t - toggle textures");
+		drawstring(8, Y(2), "w - toggle wireframe");
+		drawstring(8, Y(3), "b - toggle backface culling");
+		drawstring(8, Y(4), "l - toggle two-sided lighting");
+		drawstring(8, Y(5), "g - toggle ground plane");
+		drawstring(8, Y(6), "p - toggle orthogonal/perspective camera");
+		drawstring(8, Y(7), "i - set up dimetric camera (2:1)");
+		drawstring(8, Y(8), "I - set up isometric camera");
+
+		if (1|| curanim) {
+			drawstring(8, Y(10), "space - play/pause animation");
+			drawstring(8, Y(11), "[ and ] - change animation playback speed");
+			drawstring(8, Y(12), ", and . - single step animation");
+		}
 	}
 
-
 	glutSwapBuffers();
-
-	glutPostRedisplay();
 
 	i = glGetError();
 	if (i) fprintf(stderr, "opengl error: %d\n", i);
@@ -1137,7 +1035,21 @@ void display(void){
 
 void usage(void)
 {
-
+	fprintf(stderr, "usage: assview [-geometry WxH] [options] asset.dae\n");
+	fprintf(stderr, "\t-i\tdimetric (2:1) camera\n");
+	fprintf(stderr, "\t-I\ttrue isometric camera\n");
+	fprintf(stderr, "\t-a\talpha transparency mode; use more times for higher quality.\n");
+	fprintf(stderr, "\t-b\tdon't render backfaces\n");
+	fprintf(stderr, "\t-g\trender ground plane\n");
+	fprintf(stderr, "\t-l\tone-sided lighting\n");
+	fprintf(stderr, "\t-t\tdon't render textures\n");
+	fprintf(stderr, "\t-w\trender wireframe\n");
+	fprintf(stderr, "\t-c r,g,b\tbackground color\n");
+	fprintf(stderr, "\t-r n\trotate camera n degrees (yaw)\n");
+	fprintf(stderr, "\t-p n\tpitch camera n degrees\n");
+	fprintf(stderr, "\t-z n\tzoom camera n times\n");
+	fprintf(stderr, "\t-f n\trender animation at frame n\n");
+	exit(1);
 }
 
 int main(int argc, char **argv)
@@ -1153,50 +1065,25 @@ int main(int argc, char **argv)
 	int c;
 
 	core = HCore::init(16,1);
-	auxCore = new HCore::HCore(16,1);
 
 	zeros = (unsigned char*)calloc(screenw*screenh*4,sizeof(char));
 
-	glutInitWindowPosition(0, 0);
-	glutInitWindowSize(50, 50);
+	glutInitWindowPosition(50, 50+24);
+	glutInitWindowSize(screenw, screenh);
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE | GLUT_ALPHA);
 
 
 
-	glutCreateWindow("Hrender");
+	glutCreateWindow("Asset Viewer");
+	screenw = glutGet(GLUT_WINDOW_WIDTH);
+	screenh = glutGet(GLUT_WINDOW_HEIGHT);
 
-
-	glewInit();
-
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-	/* Color renderbuffer. */
-	glGenRenderbuffers(1, &rbo_color);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo_color);
-	/* Storage must be one of: */
-	/* GL_RGBA4, GL_RGB565, GL_RGB5_A1, GL_DEPTH_COMPONENT16, GL_STENCIL_INDEX8. */
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA4, screenw, screenh);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rbo_color);
-
-	/* Depth renderbuffer. */
-	glGenRenderbuffers(1, &rbo_depth);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screenw, screenh);
-	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_depth);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-    glEnable(GL_DEPTH_TEST);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glViewport(0, 0, screenw, screenh);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	glMatrixMode(GL_MODELVIEW);
-
-
+#ifdef __APPLE__
+	int one = 1;
+	void *ctx = CGLGetCurrentContext();
+	CGLSetParameter(ctx, kCGLCPSwapInterval, &one);
+#endif
 
 	initchecker();
 	prefix = argv[2];
@@ -1247,11 +1134,6 @@ int main(int argc, char **argv)
 	glutMotionFunc(motion);
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(special);
-
-
-
-
-
 	glutMainLoop();
 
 	return 0;

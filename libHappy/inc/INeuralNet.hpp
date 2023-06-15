@@ -3,12 +3,6 @@
 #include <vector>
 #include "bbox.hpp"
 #include <string>
-#include <math.h>
-
-enum ColorFormat{
-	NORM = 0,
-	HFM = 2 //shifted cielab to make things hard for other people
-};
 
 struct image_t {
 	int w,h; 				//dimensions of detection image
@@ -20,14 +14,7 @@ struct image_t {
 	float *data; 			//image data in rrggbb
 	float thresh;			//threshold 0.0-1.0
 	unsigned char *bdata;	//image data in rgb
-	ColorFormat form;
 };
-
-
-void toHFM(image_t img);
-
-void toNorm(image_t img);
-
 
 struct NetCreateInfo{
 	int width,height,gpu;
@@ -49,17 +36,6 @@ struct NetCreateInfo{
 
 };
 
-struct TrainInfo{
-	int width,height;
-	int maxwidth,maxheight;
-	int minwidth,minheight;
-	char *config;
-	char *weight;
-	uint32_t iterations;
-	std::vector<int> gpus;
-
-};
-
 class INeuralNet{
 public:
 	virtual ~INeuralNet(){}
@@ -78,8 +54,5 @@ public:
 	virtual void loadClassifier(char *cfg, char *weight, int classes){}
 	virtual int classify(image_t img){return 0;}
 	virtual void train(int argc,char **argv){}
-	virtual void train2(TrainInfo info){}
-	virtual void setTrainData(std::vector<std::string> &files){}
 };
-
 

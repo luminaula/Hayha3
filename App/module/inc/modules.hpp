@@ -1,7 +1,7 @@
 #include "trackermodule.hpp"
 
-namespace Modules {
-extern TrackerModule *tracker;
+namespace Modules{
+    extern TrackerModule *tracker;
 
-void init();
-} // namespace Modules
+    void init();
+}
